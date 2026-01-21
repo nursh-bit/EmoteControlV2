@@ -35,7 +35,8 @@ local function CreateDropdown(parent, label, items, onChanged)
 end
 
 function EC:CreateOptionsPanel()
-    local panel = CreateFrame("Frame", "EmoteControlOptions", InterfaceOptionsFramePanelContainer)
+    local container = rawget(_G, "InterfaceOptionsFramePanelContainer") or UIParent
+    local panel = CreateFrame("Frame", "EmoteControlOptions", container)
     panel.name = "Emote Control"
 
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -62,9 +63,9 @@ function EC:CreateOptionsPanel()
     cooldownSlider:SetMinMaxValues(2, 60)
     cooldownSlider:SetValueStep(1)
     cooldownSlider:SetObeyStepOnDrag(true)
-    cooldownSlider.Text = cooldownSlider:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    cooldownSlider.Text:SetPoint("TOP", cooldownSlider, "BOTTOM", 0, -2)
-    cooldownSlider.Text:SetText("Global cooldown (seconds)")
+    local cooldownLabel = cooldownSlider:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    cooldownLabel:SetPoint("TOP", cooldownSlider, "BOTTOM", 0, -2)
+    cooldownLabel:SetText("Global cooldown (seconds)")
     cooldownSlider:SetScript("OnValueChanged", function(_, value)
         self.db.profile.cooldown = math.floor(value)
     end)
@@ -74,9 +75,9 @@ function EC:CreateOptionsPanel()
     rateSlider:SetMinMaxValues(1, 20)
     rateSlider:SetValueStep(1)
     rateSlider:SetObeyStepOnDrag(true)
-    rateSlider.Text = rateSlider:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    rateSlider.Text:SetPoint("TOP", rateSlider, "BOTTOM", 0, -2)
-    rateSlider.Text:SetText("Rate limit per minute")
+    local rateLabel = rateSlider:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    rateLabel:SetPoint("TOP", rateSlider, "BOTTOM", 0, -2)
+    rateLabel:SetText("Rate limit per minute")
     rateSlider:SetScript("OnValueChanged", function(_, value)
         self.db.profile.rateLimit = math.floor(value)
     end)
@@ -93,8 +94,8 @@ function EC:CreateOptionsPanel()
     if Settings and Settings.RegisterCanvasLayoutCategory then
         local category = Settings.RegisterCanvasLayoutCategory(panel, "Emote Control")
         Settings.RegisterAddOnCategory(category)
-    elseif InterfaceOptions_AddCategory then
-        InterfaceOptions_AddCategory(panel)
+    elseif rawget(_G, "InterfaceOptions_AddCategory") then
+        rawget(_G, "InterfaceOptions_AddCategory")(panel)
     end
     
     self.optionsPanel = panel

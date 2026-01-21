@@ -96,6 +96,7 @@ end
 function EC:BuildContext(event, ...)
     local playerName, playerClass, playerRace, playerLevel = self:GetPlayerInfo()
     local targetName, targetClass, targetRace = self:GetTargetInfo()
+    local GetSpellInfo = rawget(_G, "GetSpellInfo")
 
     local ctx = {
         event = event,
@@ -131,7 +132,7 @@ function EC:BuildContext(event, ...)
             -- WoW 10.0+ uses C_Spell API
             if C_Spell and C_Spell.GetSpellName then
                 ctx.spellName = C_Spell.GetSpellName(spellId)
-            else
+            elseif GetSpellInfo then
                 ctx.spellName = GetSpellInfo(spellId)
             end
         end
@@ -273,10 +274,10 @@ function EC:CheckConditions(trigger, ctx)
 
     if cond.aura then
         -- WoW 10.0+ API compatibility
-        local hasAura = C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName("player", cond.aura, "HELPFUL|HARMFUL")
+        local hasAura = C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName("player", cond.aura, "HELPFUL|HARMFUL") ~= nil
         if not hasAura then
             -- Fallback for older clients
-            hasAura = AuraUtil and AuraUtil.FindAuraByName(cond.aura, "player")
+            hasAura = AuraUtil and AuraUtil.FindAuraByName(cond.aura, "player") ~= nil
         end
         if not hasAura then
             return false
