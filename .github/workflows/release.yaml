@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "v*"
+  release:
+    types:
+      - published
   workflow_dispatch:
 
 concurrency:
@@ -27,6 +30,20 @@ jobs:
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+          # Uncomment if you use these integrations:
           # WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}
           # WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
 
+      # Only create a GitHub Release when this workflow was triggered by a tag push.
+      # If the workflow is triggered by the 'release' event, skip this step to avoid duplication.
+      - name: Create GitHub Release
+        if: github.event_name == 'push'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generateReleaseNotes: true
+          allowUpdates: true
+          makeLatest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
