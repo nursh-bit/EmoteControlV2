@@ -440,6 +440,10 @@ function EC:SendMessage(message, channel, ctx)
         return
     end
 
+    if self.chatReady == false then
+        return
+    end
+
     channel = self:NormalizeChannel(channel)
 
     -- WoW 12.0.0: Channel validation and fallback
@@ -449,6 +453,11 @@ function EC:SendMessage(message, channel, ctx)
         channel = "SAY"
     elseif channel == "GUILD" and not IsInGuild() then
         channel = "SAY"
+    elseif channel == "INSTANCE" then
+        local inInstance, instanceType = IsInInstance()
+        if not inInstance or not (instanceType == "party" or instanceType == "raid" or instanceType == "pvp" or instanceType == "arena" or instanceType == "scenario") then
+            channel = "SAY"
+        end
     end
     
     -- WoW 12.0.0: Restrict automated chat in instances to prevent abuse
@@ -459,6 +468,18 @@ function EC:SendMessage(message, channel, ctx)
             self:Debug("Suppressed message in instance:", channel)
         end
         return
+    end
+
+    local canSend = rawget(_G, "ChatEdit_CanSend")
+    if canSend and not canSend() then
+        return
+    end
+
+    if C_ChatInfo and C_ChatInfo.CanSendChatMessage then
+        local ok = C_ChatInfo.CanSendChatMessage(channel)
+        if ok == false then
+            return
+        end
     end
     
     -- WoW 12.0.0: Use pcall to catch SendChatMessage restrictions

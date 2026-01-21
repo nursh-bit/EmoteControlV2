@@ -120,6 +120,7 @@ function EC:NormalizeChannel(channel)
         ["RAID"] = true,
         ["GUILD"] = true,
         ["EMOTE"] = true,
+        ["INSTANCE"] = true,
     }
     
     if not validChannels[channel] then

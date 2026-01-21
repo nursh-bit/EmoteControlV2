@@ -1,6 +1,14 @@
 local _, EC = ...
 
 function EC:OnPlayerLogin()
+    self.chatReady = false
+    if C_Timer and C_Timer.After then
+        C_Timer.After(5, function()
+            self.chatReady = true
+        end)
+    else
+        self.chatReady = true
+    end
     self:InitializeUI()
     self:Debug("Player login")
 end
