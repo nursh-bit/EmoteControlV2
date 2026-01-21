@@ -188,6 +188,10 @@ function EC:CreateOptionsPanel()
     enableAllButton:SetPoint("LEFT", packTitle, "RIGHT", 12, 0)
     enableAllButton:SetText("Enable all")
     enableAllButton:SetScript("OnClick", function()
+        if InCombatLockdown() then
+            print("|cff00c8ff[EmoteControl]|r Cannot change packs during combat.")
+            return
+        end
         for packId in pairs(self.packs or {}) do
             self.db.profile.enablePacks[packId] = true
         end
@@ -203,6 +207,10 @@ function EC:CreateOptionsPanel()
     disableAllButton:SetPoint("LEFT", enableAllButton, "RIGHT", 8, 0)
     disableAllButton:SetText("Disable all")
     disableAllButton:SetScript("OnClick", function()
+        if InCombatLockdown() then
+            print("|cff00c8ff[EmoteControl]|r Cannot change packs during combat.")
+            return
+        end
         for packId in pairs(self.packs or {}) do
             self.db.profile.enablePacks[packId] = false
         end
@@ -240,6 +248,10 @@ function EC:CreateOptionsPanel()
             local pack = self.packs[packId]
             local label = pack and pack.name or packId
             local check = CreateCheckbox(packList, label .. " (" .. packId .. ")", "Enable/disable this pack", function(value)
+                if InCombatLockdown() then
+                    print("|cff00c8ff[EmoteControl]|r Cannot change packs during combat.")
+                    return
+                end
                 self.db.profile.enablePacks[packId] = value
                 self:BuildTriggerIndex()
                 self.userActivated = true

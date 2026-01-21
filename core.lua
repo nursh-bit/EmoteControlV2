@@ -65,6 +65,27 @@ function EC:RegisterTriggerEvents()
     self.pendingEventUpdate = false
 end
 
+function EC:RequestEventUpdate()
+    if self.pendingEventUpdate then
+        return
+    end
+    self.pendingEventUpdate = true
+    if InCombatLockdown() then
+        self:Debug("Queued event update until out of combat")
+        self.frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+        return
+    end
+    if C_Timer and C_Timer.After then
+        C_Timer.After(0, function()
+            if self.pendingEventUpdate then
+                self:RegisterTriggerEvents()
+            end
+        end)
+    else
+        self:RegisterTriggerEvents()
+    end
+end
+
 function EC:SetupSlashCommands()
     SLASH_EMOTECONTROL1 = "/emotecontrol"
     SLASH_EMOTECONTROL2 = "/ec"

@@ -35,8 +35,8 @@ function EC:BuildTriggerIndex()
         end
     end
 
-    if self.RegisterTriggerEvents then
-        self:RegisterTriggerEvents()
+    if self.RequestEventUpdate then
+        self:RequestEventUpdate()
     end
 end
 
