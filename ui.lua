@@ -18,17 +18,24 @@ local function CreateDropdown(parent, label, items, onChanged)
     title:SetText(label)
     title:SetPoint("TOPLEFT", dropdown, "TOPLEFT", 16, 20)
 
-    UIDropDownMenu_Initialize(dropdown, function(frame, level)
-        for _, item in ipairs(items) do
-            local info = UIDropDownMenu_CreateInfo()
-            info.text = item
-            info.func = function()
-                UIDropDownMenu_SetSelectedValue(dropdown, item)
-                onChanged(item)
-            end
-            info.value = item
-            UIDropDownMenu_AddButton(info, level)
+    dropdown.initialized = false
+    dropdown:SetScript("OnShow", function()
+        if dropdown.initialized then
+            return
         end
+        UIDropDownMenu_Initialize(dropdown, function(frame, level)
+            for _, item in ipairs(items) do
+                local info = UIDropDownMenu_CreateInfo()
+                info.text = item
+                info.func = function()
+                    UIDropDownMenu_SetSelectedValue(dropdown, item)
+                    onChanged(item)
+                end
+                info.value = item
+                UIDropDownMenu_AddButton(info, level)
+            end
+        end)
+        dropdown.initialized = true
     end)
 
     return dropdown
@@ -313,6 +320,13 @@ function EC:EnsureUI()
     self:CreateOptionsPanel()
 end
 
+function EC:InitializeUI()
+    if self.optionsPanel then
+        return
+    end
+    self:CreateOptionsPanel()
+end
+
 function EC:ShowExportFrame(data)
     if not self.exportFrame then
         local frame = CreateFrame("Frame", "EmoteControlExport", UIParent, "BasicFrameTemplateWithInset")
@@ -377,6 +391,3 @@ function EC:ShowImportFrame()
     self.importFrame:Show()
 end
 
-function EC:InitializeUI()
-    self:CreateOptionsPanel()
-end

@@ -9,6 +9,17 @@ function EC:OnPlayerLogin()
     else
         self.chatReady = true
     end
+    self:InitializeUI()
+    self:SetupSlashCommands()
+    if self.pendingEventInit then
+        if C_Timer and C_Timer.After then
+            C_Timer.After(0.1, function()
+                self:RegisterStaticEvents()
+            end)
+        else
+            self:RegisterStaticEvents()
+        end
+    end
     self:Debug("Player login")
 end
 

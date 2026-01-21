@@ -12,14 +12,17 @@ function EC:Initialize()
 
     self:RegisterCustomPack()
     self:BuildTriggerIndex()
-    self:RegisterStaticEvents()
-    self:SetupSlashCommands()
+    self.pendingEventInit = true
 
     self:Debug("Initialized", self.version)
 end
 
 function EC:RegisterStaticEvents()
     if self.staticEventsRegistered then
+        return
+    end
+    if InCombatLockdown() then
+        self.pendingEventInit = true
         return
     end
     local events = {
@@ -56,14 +59,30 @@ function EC:RegisterStaticEvents()
         self.frame:RegisterEvent(event)
     end
     self.staticEventsRegistered = true
+    self.pendingEventInit = false
 end
 
 function EC:SetupSlashCommands()
-    SLASH_EMOTECONTROL1 = "/emotecontrol"
-    SLASH_EMOTECONTROL2 = "/ec"
-    SlashCmdList["EMOTECONTROL"] = function(msg)
-        self:HandleSlashCommand(msg)
+    if self.slashRegistered then
+        return
     end
+    local slashApi = rawget(_G, "C_SlashCommands")
+    local register = slashApi and slashApi.RegisterCommand
+    if register then
+        register("/emotecontrol", function(msg)
+            self:HandleSlashCommand(msg)
+        end)
+        register("/ec", function(msg)
+            self:HandleSlashCommand(msg)
+        end)
+    else
+        SLASH_EMOTECONTROL1 = "/emotecontrol"
+        SLASH_EMOTECONTROL2 = "/ec"
+        SlashCmdList["EMOTECONTROL"] = function(msg)
+            self:HandleSlashCommand(msg)
+        end
+    end
+    self.slashRegistered = true
 end
 
 function EC:HandleSlashCommand(msg)
