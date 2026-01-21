@@ -12,78 +12,50 @@ function EC:Initialize()
 
     self:RegisterCustomPack()
     self:BuildTriggerIndex()
-    self:RegisterTriggerEvents()
+    self:RegisterStaticEvents()
     self:SetupSlashCommands()
 
     self:Debug("Initialized", self.version)
 end
 
-function EC:RegisterTriggerEvents()
-    -- WoW 12.0.0: Don't modify event registration during combat
-    if InCombatLockdown() then
-        self:Debug("Deferred event registration until out of combat")
-        -- Register a handler to do this when combat ends
-        if not self.pendingEventUpdate then
-            self.pendingEventUpdate = true
-            self.frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-        end
+function EC:RegisterStaticEvents()
+    if self.staticEventsRegistered then
         return
     end
-    
-    self.registeredEvents = self.registeredEvents or {}
-    for _, event in ipairs(self.registeredEvents) do
-        self.frame:UnregisterEvent(event)
-    end
-    self.registeredEvents = {}
-
-    local virtualEvents = {
-        COMBAT_CRITICAL_HIT = true,
-        COMBAT_DODGED = true,
-        COMBAT_PARRIED = true,
-        COMBAT_INTERRUPTED = true,
+    local events = {
+        "PLAYER_DEAD",
+        "PLAYER_ALIVE",
+        "PLAYER_UNGHOST",
+        "PLAYER_REGEN_DISABLED",
+        "PLAYER_REGEN_ENABLED",
+        "ZONE_CHANGED_NEW_AREA",
+        "PLAYER_LEVEL_UP",
+        "ACHIEVEMENT_EARNED",
+        "CHAT_MSG_LOOT",
+        "COMBAT_LOG_EVENT_UNFILTERED",
+        "UNIT_SPELLCAST_SUCCEEDED",
+        "PLAYER_SPECIALIZATION_CHANGED",
+        "PLAYER_ENTERING_WORLD",
+        "GROUP_JOINED",
+        "GROUP_LEFT",
+        "MAIL_SHOW",
+        "BANKFRAME_OPENED",
+        "MERCHANT_SHOW",
+        "TAXIMAP_OPENED",
+        "RESURRECT_REQUEST",
+        "READY_CHECK",
+        "CONFIRM_SUMMON",
+        "BOSS_KILL",
+        "CHALLENGE_MODE_START",
+        "CHALLENGE_MODE_COMPLETED",
+        "PLAYER_UPDATE_RESTING",
+        "TRANSMOGRIFY_SUCCESS",
     }
 
-    local needsCombatLog = false
-    for event in pairs(self.triggersByEvent) do
-        if virtualEvents[event] then
-            needsCombatLog = true
-        end
+    for _, event in ipairs(events) do
+        self.frame:RegisterEvent(event)
     end
-
-    for event in pairs(self.triggersByEvent) do
-        if not virtualEvents[event] then
-            self.frame:RegisterEvent(event)
-            table.insert(self.registeredEvents, event)
-        end
-    end
-
-    if needsCombatLog and not self.triggersByEvent["COMBAT_LOG_EVENT_UNFILTERED"] then
-        self.frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        table.insert(self.registeredEvents, "COMBAT_LOG_EVENT_UNFILTERED")
-    end
-    
-    self.pendingEventUpdate = false
-end
-
-function EC:RequestEventUpdate()
-    if self.pendingEventUpdate then
-        return
-    end
-    self.pendingEventUpdate = true
-    if InCombatLockdown() then
-        self:Debug("Queued event update until out of combat")
-        self.frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-        return
-    end
-    if C_Timer and C_Timer.After then
-        C_Timer.After(0, function()
-            if self.pendingEventUpdate then
-                self:RegisterTriggerEvents()
-            end
-        end)
-    else
-        self:RegisterTriggerEvents()
-    end
+    self.staticEventsRegistered = true
 end
 
 function EC:SetupSlashCommands()
@@ -596,6 +568,22 @@ function EC:SendMessage(message, channel, ctx)
         return
     end
 
+    local outputMode = self.db.profile.outputMode or "local"
+    if outputMode == "local" then
+        local chatFrame = rawget(_G, "DEFAULT_CHAT_FRAME")
+        if chatFrame and chatFrame.AddMessage then
+            chatFrame:AddMessage("|cff00c8ff[EmoteControl]|r " .. message)
+        else
+            print("|cff00c8ff[EmoteControl]|r", message)
+        end
+        return
+    end
+
+    -- Only allow actual chat sends from explicit user test action
+    if not ctx or ctx.event ~= "TEST" then
+        return
+    end
+
     if self.chatReady == false then
         return
     end
@@ -649,6 +637,9 @@ function EC:SendMessage(message, channel, ctx)
 end
 
 function EC:OpenOptions()
+    if self.EnsureUI then
+        self:EnsureUI()
+    end
     if self.optionsCategory and Settings and Settings.OpenToCategory then
         Settings.OpenToCategory(self.optionsCategory)
         return

@@ -5,6 +5,7 @@ EC.defaults = {
         enabled = true,
         outputEnabled = true,
         requireActivation = true,
+        outputMode = "local",
         channel = "SAY",
         cooldown = 8,
         cooldownChat = 8,

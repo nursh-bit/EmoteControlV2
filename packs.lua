@@ -35,9 +35,7 @@ function EC:BuildTriggerIndex()
         end
     end
 
-    if self.RequestEventUpdate then
-        self:RequestEventUpdate()
-    end
+    -- No dynamic event registration; static registration occurs at init.
 end
 
 function EC:RegisterCustomPack()

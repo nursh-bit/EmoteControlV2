@@ -9,7 +9,6 @@ function EC:OnPlayerLogin()
     else
         self.chatReady = true
     end
-    self:InitializeUI()
     self:Debug("Player login")
 end
 

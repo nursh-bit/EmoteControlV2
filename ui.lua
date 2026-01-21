@@ -89,10 +89,15 @@ function EC:CreateOptionsPanel()
     end)
     muteInInstancesCheck:SetPoint("TOPLEFT", muteInCitiesCheck, "BOTTOMLEFT", 0, -8)
 
+    local outputModeDropdown = CreateDropdown(panel, "Output mode", { "LOCAL", "CHAT" }, function(value)
+        self.db.profile.outputMode = value:lower()
+    end)
+    outputModeDropdown:SetPoint("TOPLEFT", muteInInstancesCheck, "BOTTOMLEFT", -16, -24)
+
     local channelDropdown = CreateDropdown(panel, "Output channel", { "SAY", "YELL", "PARTY", "RAID", "GUILD", "EMOTE", "INSTANCE" }, function(value)
         self.db.profile.channel = value
     end)
-    channelDropdown:SetPoint("TOPLEFT", muteInInstancesCheck, "BOTTOMLEFT", -16, -24)
+    channelDropdown:SetPoint("TOPLEFT", outputModeDropdown, "BOTTOMLEFT", 0, -24)
 
     local testChannelDropdown = CreateDropdown(panel, "Test channel", { "SAY", "YELL", "PARTY", "RAID", "GUILD", "EMOTE", "INSTANCE" }, function(value)
         self.db.profile.testChannel = value
@@ -274,6 +279,7 @@ function EC:CreateOptionsPanel()
         onlyInInstanceCheck:SetChecked(self.db.profile.onlyInInstance)
         muteInCitiesCheck:SetChecked(self.db.profile.muteInCities)
         muteInInstancesCheck:SetChecked(self.db.profile.muteInInstances)
+        UIDropDownMenu_SetSelectedValue(outputModeDropdown, (self.db.profile.outputMode or "local"):upper())
         UIDropDownMenu_SetSelectedValue(channelDropdown, self.db.profile.channel)
         UIDropDownMenu_SetSelectedValue(testChannelDropdown, self.db.profile.testChannel)
         cooldownSlider:SetValue(self.db.profile.cooldown)
@@ -294,6 +300,17 @@ function EC:CreateOptionsPanel()
     end
     
     self.optionsPanel = panel
+end
+
+function EC:EnsureUI()
+    if self.optionsPanel then
+        return
+    end
+    if InCombatLockdown() then
+        print("|cff00c8ff[EmoteControl]|r Cannot open options during combat.")
+        return
+    end
+    self:CreateOptionsPanel()
 end
 
 function EC:ShowExportFrame(data)
