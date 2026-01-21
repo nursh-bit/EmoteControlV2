@@ -175,6 +175,16 @@ function EC:ShouldFireTrigger(trigger, ctx)
         return false
     end
 
+    local cond = trigger.conditions or trigger
+    local defaults = trigger.packDefaults or trigger.defaults
+    local randomChance = cond.randomChance
+    if randomChance == nil and defaults then
+        randomChance = defaults.randomChance
+    end
+    if randomChance and math.random() > randomChance then
+        return false
+    end
+
     local chance = override and override.chance or trigger.chance or 1
     if chance < 1 and math.random() > chance then
         return false
@@ -193,44 +203,87 @@ function EC:ShouldFireTrigger(trigger, ctx)
 end
 
 function EC:CheckConditions(trigger, ctx)
-    -- Support old pack format with conditions table
+    -- Support old pack format with conditions table and pack defaults
     local cond = trigger.conditions or trigger
+    local defaults = trigger.packDefaults or trigger.defaults
+    local function pick(key)
+        if cond[key] ~= nil then
+            return cond[key]
+        end
+        if defaults and defaults[key] ~= nil then
+            return defaults[key]
+        end
+        return nil
+    end
+    local function toList(value)
+        if value == nil then
+            return nil
+        end
+        if type(value) == "table" then
+            return value
+        end
+        return { value }
+    end
+    local function matchPattern(pattern, text)
+        if not pattern or not text then
+            return false
+        end
+        if not pattern:find("%*") then
+            return pattern == text
+        end
+        local escaped = pattern:gsub("([%^%$%(%)%%%.%[%]%+%-%?])", "%%%1")
+        local luaPattern = "^" .. escaped:gsub("%*", ".*") .. "$"
+        return text:match(luaPattern) ~= nil
+    end
+    local function matchAny(patterns, text)
+        local list = toList(patterns)
+        if not list then
+            return false
+        end
+        for _, pattern in ipairs(list) do
+            if matchPattern(pattern, text) then
+                return true
+            end
+        end
+        return false
+    end
     
     if trigger.event == "COMBAT_LOG_EVENT_UNFILTERED" and trigger.subEvent and ctx.subEvent ~= trigger.subEvent then
         return false
     end
 
     -- Class check (support both string and table)
-    if cond.class then
-        local classList = type(cond.class) == "table" and cond.class or { cond.class }
+    local classList = toList(pick("class"))
+    if classList then
         if not self:TableContains(classList, ctx.playerClass) then
             return false
         end
     end
     
     -- Race check (support both string and table)
-    if cond.race then
-        local raceList = type(cond.race) == "table" and cond.race or { cond.race }
+    local raceList = toList(pick("race"))
+    if raceList then
         if not self:TableContains(raceList, ctx.playerRace) then
             return false
         end
     end
     
     -- Spec name check
-    if cond.spec and ctx.spec then
-        local specList = type(cond.spec) == "table" and cond.spec or { cond.spec }
+    local specList = toList(pick("spec"))
+    if specList and ctx.spec then
         if not self:TableContains(specList, ctx.spec) then
             return false
         end
     end
     
     -- Spec ID check (for old packs)
-    if cond.specID then
+    local specID = pick("specID")
+    if specID then
         local specIndex = GetSpecialization()
         if specIndex then
             -- GetSpecializationInfo returns: id, name, description, icon, role, classFile
             local currentSpecID = GetSpecializationInfo(specIndex)
-            if currentSpecID ~= cond.specID then
+            if currentSpecID ~= specID then
                 return false
             end
         else
@@ -239,45 +292,66 @@ function EC:CheckConditions(trigger, ctx)
     end
     
     -- Spell ID check for UNIT_SPELLCAST_SUCCEEDED
-    if cond.spellID and ctx.spellId and ctx.spellId ~= cond.spellID then
+    local spellID = pick("spellID")
+    if spellID and ctx.spellId and ctx.spellId ~= spellID then
+        return false
+    end
+    if spellID and not ctx.spellId then
         return false
     end
     
     -- Spell name check for UNIT_SPELLCAST_SUCCEEDED
-    if cond.spellName and ctx.spellName and ctx.spellName ~= cond.spellName then
-        return false
+    local spellName = pick("spellName")
+    if spellName then
+        if not ctx.spellName or not matchAny(spellName, ctx.spellName) then
+            return false
+        end
     end
-    if cond.inCombat ~= nil and (cond.inCombat ~= UnitAffectingCombat("player")) then
+
+    local unit = pick("unit")
+    if unit and unit ~= "player" then
+        if not UnitExists(unit) then
+            return false
+        end
+    end
+
+    local inCombat = pick("inCombat")
+    if inCombat ~= nil and (inCombat ~= UnitAffectingCombat("player")) then
         return false
     end
 
-    if cond.groupSizeMin or cond.groupSizeMax then
+    local groupSizeMin = pick("groupSizeMin")
+    local groupSizeMax = pick("groupSizeMax")
+    if groupSizeMin or groupSizeMax then
         local size = self:GetGroupSize()
-        if cond.groupSizeMin and size < cond.groupSizeMin then
+        if groupSizeMin and size < groupSizeMin then
             return false
         end
-        if cond.groupSizeMax and size > cond.groupSizeMax then
+        if groupSizeMax and size > groupSizeMax then
             return false
         end
     end
 
-    if cond.requireTarget and not ctx.targetName then
+    local requireTarget = pick("requireTarget")
+    if requireTarget and not ctx.targetName then
         return false
     end
 
-    if cond.healthBelow then
+    local healthBelow = pick("healthBelow")
+    if healthBelow then
         local hp = UnitHealth("player") / math.max(1, UnitHealthMax("player"))
-        if hp > cond.healthBelow then
+        if hp > healthBelow then
             return false
         end
     end
 
-    if cond.aura then
+    local aura = pick("aura")
+    if aura then
         -- WoW 10.0+ API compatibility
-        local hasAura = C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName("player", cond.aura, "HELPFUL|HARMFUL") ~= nil
+        local hasAura = C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName("player", aura, "HELPFUL|HARMFUL") ~= nil
         if not hasAura then
             -- Fallback for older clients
-            hasAura = AuraUtil and AuraUtil.FindAuraByName(cond.aura, "player") ~= nil
+            hasAura = AuraUtil and AuraUtil.FindAuraByName(aura, "player") ~= nil
         end
         if not hasAura then
             return false

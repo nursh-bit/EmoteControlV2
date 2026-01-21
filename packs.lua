@@ -25,6 +25,7 @@ function EC:BuildTriggerIndex()
         if self:GetPackEnabled(packId) and type(pack.triggers) == "table" then
             for _, trigger in ipairs(pack.triggers) do
                 trigger.packId = packId
+                trigger.packDefaults = pack.defaults
                 local event = trigger.event
                 if event then
                     self.triggersByEvent[event] = self.triggersByEvent[event] or {}
