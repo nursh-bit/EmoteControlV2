@@ -13,6 +13,7 @@ import_export.lua
 events.lua
 core.lua
 ui.lua
+editor.lua
 trigger_builder.lua
 packs\default_pack.lua
 packs\deathknight_pack.lua

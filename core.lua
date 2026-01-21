@@ -137,6 +137,12 @@ function EC:HandleSlashCommand(msg)
         self:ShowImportFrame()
     elseif cmd == "builder" then
         self:ToggleTriggerBuilder()
+    elseif cmd == "editor" then
+        if self.OpenTriggerEditor then
+            self:OpenTriggerEditor()
+        else
+            print("|cff00c8ff[EmoteControl]|r Trigger editor not available.")
+        end
     elseif cmd == "debug" and rest ~= "" then
         if rest == "on" then
             self.db.profile.debug = true
@@ -160,6 +166,7 @@ function EC:HandleSlashCommand(msg)
         print("/ec pack <packId> on|off")
         print("/ec export | import")
         print("/ec builder")
+        print("/ec editor")
         print("/ec debug on|off")
         print("/ec output on|off")
         print("/ec options")
@@ -553,7 +560,12 @@ function EC:CheckRateLimit()
 end
 
 function EC:BuildMessage(trigger, ctx)
-    local message = self:RandomItem(trigger.messages)
+    local override = self:GetOverride(trigger)
+    local messages = trigger.messages
+    if override and type(override.messages) == "table" and #override.messages > 0 then
+        messages = override.messages
+    end
+    local message = self:RandomItem(messages)
     if not message then
         return nil
     end

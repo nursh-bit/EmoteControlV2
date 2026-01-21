@@ -131,7 +131,7 @@ function EC:CreateOptionsPanel()
         end
     )
     outputModeLabel:SetPoint("TOPLEFT", applyButton, "BOTTOMLEFT", 0, -16)
-    outputModeButton:SetPoint("TOPLEFT", outputModeLabel, "BOTTOMLEFT", 0, -6)
+    outputModeButton:SetPoint("LEFT", outputModeLabel, "RIGHT", 12, 0)
 
     local channelLabel, channelButton = CreateCycleButton(
         panel,
@@ -144,8 +144,8 @@ function EC:CreateOptionsPanel()
             self.db.profile.channel = value
         end
     )
-    channelLabel:SetPoint("TOPLEFT", outputModeButton, "BOTTOMLEFT", 0, -14)
-    channelButton:SetPoint("TOPLEFT", channelLabel, "BOTTOMLEFT", 0, -6)
+    channelLabel:SetPoint("TOPLEFT", outputModeLabel, "BOTTOMLEFT", 0, -14)
+    channelButton:SetPoint("LEFT", channelLabel, "RIGHT", 12, 0)
 
     local testChannelLabel, testChannelButton = CreateCycleButton(
         panel,
@@ -158,11 +158,11 @@ function EC:CreateOptionsPanel()
             self.db.profile.testChannel = value
         end
     )
-    testChannelLabel:SetPoint("TOPLEFT", channelButton, "BOTTOMLEFT", 0, -14)
-    testChannelButton:SetPoint("TOPLEFT", testChannelLabel, "BOTTOMLEFT", 0, -6)
+    testChannelLabel:SetPoint("TOPLEFT", channelLabel, "BOTTOMLEFT", 0, -14)
+    testChannelButton:SetPoint("LEFT", testChannelLabel, "RIGHT", 12, 0)
 
     local cooldownSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
-    cooldownSlider:SetPoint("TOPLEFT", testChannelButton, "BOTTOMLEFT", 12, -22)
+    cooldownSlider:SetPoint("TOPLEFT", testChannelLabel, "BOTTOMLEFT", 24, -30)
     cooldownSlider:SetMinMaxValues(2, 60)
     cooldownSlider:SetValueStep(1)
     cooldownSlider:SetObeyStepOnDrag(true)
@@ -230,9 +230,22 @@ function EC:CreateOptionsPanel()
         self:ToggleTriggerBuilder()
     end)
 
+    local editorButton = CreateFrame("Button", nil, panel, "GameMenuButtonTemplate")
+    editorButton:SetSize(160, 24)
+    editorButton:SetPoint("LEFT", builderButton, "RIGHT", 12, 0)
+    editorButton:SetText("Open Trigger Editor")
+    editorButton:SetScript("OnClick", function()
+        self.userActivated = true
+        if self.OpenTriggerEditor then
+            self:OpenTriggerEditor()
+        else
+            print("|cff00c8ff[EmoteControl]|r Trigger editor not available.")
+        end
+    end)
+
     local testButton = CreateFrame("Button", nil, panel, "GameMenuButtonTemplate")
     testButton:SetSize(140, 24)
-    testButton:SetPoint("LEFT", builderButton, "RIGHT", 12, 0)
+    testButton:SetPoint("TOPLEFT", builderButton, "BOTTOMLEFT", 0, -8)
     testButton:SetText("Test Output")
     testButton:SetScript("OnClick", function()
         self.userActivated = true
@@ -242,7 +255,7 @@ function EC:CreateOptionsPanel()
     end)
 
     local packTitle = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    packTitle:SetPoint("TOPLEFT", builderButton, "BOTTOMLEFT", 0, -18)
+    packTitle:SetPoint("TOPLEFT", testButton, "BOTTOMLEFT", 0, -18)
     packTitle:SetText("Packs")
 
     local enableAllButton = CreateFrame("Button", nil, panel, "GameMenuButtonTemplate")
