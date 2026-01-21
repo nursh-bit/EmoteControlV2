@@ -18,6 +18,10 @@ function EC:Initialize()
 end
 
 function EC:RegisterStaticEvents()
+    if not self.db.profile.enableEvents then
+        self:Debug("Event registration disabled (safe mode)")
+        return
+    end
     if self.staticEventsRegistered then
         return
     end
@@ -63,6 +67,10 @@ function EC:RegisterStaticEvents()
 end
 
 function EC:SetupSlashCommands()
+    if not self.db.profile.enableSlash then
+        self:Debug("Slash commands disabled (safe mode)")
+        return
+    end
     if self.slashRegistered then
         return
     end

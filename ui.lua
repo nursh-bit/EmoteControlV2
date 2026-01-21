@@ -61,10 +61,20 @@ function EC:CreateOptionsPanel()
     end)
     outputCheck:SetPoint("TOPLEFT", enabledCheck, "BOTTOMLEFT", 0, -8)
 
+    local enableEventsCheck = CreateCheckbox(panel, "Enable live events (requires reload)", "Register game events (may trigger taint warnings in Midnight)", function(value)
+        self.db.profile.enableEvents = value
+    end)
+    enableEventsCheck:SetPoint("TOPLEFT", outputCheck, "BOTTOMLEFT", 0, -8)
+
+    local enableSlashCheck = CreateCheckbox(panel, "Enable slash commands (requires reload)", "Register /ec and /emotecontrol (may trigger taint warnings)", function(value)
+        self.db.profile.enableSlash = value
+    end)
+    enableSlashCheck:SetPoint("TOPLEFT", enableEventsCheck, "BOTTOMLEFT", 0, -8)
+
     local debugCheck = CreateCheckbox(panel, "Debug output", "Print debug information", function(value)
         self.db.profile.debug = value
     end)
-    debugCheck:SetPoint("TOPLEFT", outputCheck, "BOTTOMLEFT", 0, -8)
+    debugCheck:SetPoint("TOPLEFT", enableSlashCheck, "BOTTOMLEFT", 0, -8)
 
     local onlyOutOfCombatCheck = CreateCheckbox(panel, "Only out of combat", "Suppress messages while in combat", function(value)
         self.db.profile.onlyOutOfCombat = value
@@ -279,6 +289,8 @@ function EC:CreateOptionsPanel()
     panel.refresh = function()
         enabledCheck:SetChecked(self.db.profile.enabled)
         outputCheck:SetChecked(self.db.profile.outputEnabled)
+        enableEventsCheck:SetChecked(self.db.profile.enableEvents)
+        enableSlashCheck:SetChecked(self.db.profile.enableSlash)
         debugCheck:SetChecked(self.db.profile.debug)
         onlyOutOfCombatCheck:SetChecked(self.db.profile.onlyOutOfCombat)
         onlyInGroupCheck:SetChecked(self.db.profile.onlyInGroup)
