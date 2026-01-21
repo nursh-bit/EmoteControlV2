@@ -12,33 +12,38 @@ local function CreateCheckbox(parent, label, tooltip, onChanged)
     return check
 end
 
-local function CreateDropdown(parent, label, items, onChanged)
-    local dropdown = CreateFrame("Frame", nil, parent, "UIDropDownMenuTemplate")
+local function CreateCycleButton(parent, label, items, getValue, setValue)
     local title = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetText(label)
-    title:SetPoint("TOPLEFT", dropdown, "TOPLEFT", 16, 20)
 
-    dropdown.initialized = false
-    dropdown:SetScript("OnShow", function()
-        if dropdown.initialized then
-            return
-        end
-        UIDropDownMenu_Initialize(dropdown, function(frame, level)
-            for _, item in ipairs(items) do
-                local info = UIDropDownMenu_CreateInfo()
-                info.text = item
-                info.func = function()
-                    UIDropDownMenu_SetSelectedValue(dropdown, item)
-                    onChanged(item)
-                end
-                info.value = item
-                UIDropDownMenu_AddButton(info, level)
+    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    button:SetSize(160, 22)
+
+    local function refresh()
+        local value = getValue()
+        button:SetText(tostring(value))
+    end
+
+    button:SetScript("OnClick", function()
+        local current = getValue()
+        local index = 1
+        for i, item in ipairs(items) do
+            if item == current then
+                index = i
+                break
             end
-        end)
-        dropdown.initialized = true
+        end
+        local nextIndex = index + 1
+        if nextIndex > #items then
+            nextIndex = 1
+        end
+        setValue(items[nextIndex])
+        refresh()
     end)
 
-    return dropdown
+    button.refresh = refresh
+
+    return title, button
 end
 
 function EC:CreateOptionsPanel()
@@ -76,6 +81,14 @@ function EC:CreateOptionsPanel()
     end)
     debugCheck:SetPoint("TOPLEFT", enableSlashCheck, "BOTTOMLEFT", 0, -8)
 
+    local applyButton = CreateFrame("Button", nil, panel, "GameMenuButtonTemplate")
+    applyButton:SetSize(120, 24)
+    applyButton:SetPoint("TOPLEFT", debugCheck, "BOTTOMLEFT", 0, -10)
+    applyButton:SetText("Apply changes")
+    applyButton:SetScript("OnClick", function()
+        self:ApplyLiveSettings()
+    end)
+
     local onlyOutOfCombatCheck = CreateCheckbox(panel, "Only out of combat", "Suppress messages while in combat", function(value)
         self.db.profile.onlyOutOfCombat = value
     end)
@@ -106,23 +119,50 @@ function EC:CreateOptionsPanel()
     end)
     muteInInstancesCheck:SetPoint("TOPLEFT", muteInCitiesCheck, "BOTTOMLEFT", 0, -8)
 
-    local outputModeDropdown = CreateDropdown(panel, "Output mode", { "LOCAL", "CHAT" }, function(value)
-        self.db.profile.outputMode = value:lower()
-    end)
-    outputModeDropdown:SetPoint("TOPLEFT", muteInInstancesCheck, "BOTTOMLEFT", -16, -24)
+    local outputModeLabel, outputModeButton = CreateCycleButton(
+        panel,
+        "Output mode",
+        { "LOCAL", "CHAT" },
+        function()
+            return (self.db.profile.outputMode or "local"):upper()
+        end,
+        function(value)
+            self.db.profile.outputMode = value:lower()
+        end
+    )
+    outputModeLabel:SetPoint("TOPLEFT", applyButton, "BOTTOMLEFT", 0, -16)
+    outputModeButton:SetPoint("TOPLEFT", outputModeLabel, "BOTTOMLEFT", 0, -6)
 
-    local channelDropdown = CreateDropdown(panel, "Output channel", { "SAY", "YELL", "PARTY", "RAID", "GUILD", "EMOTE", "INSTANCE" }, function(value)
-        self.db.profile.channel = value
-    end)
-    channelDropdown:SetPoint("TOPLEFT", outputModeDropdown, "BOTTOMLEFT", 0, -24)
+    local channelLabel, channelButton = CreateCycleButton(
+        panel,
+        "Output channel",
+        { "SAY", "YELL", "PARTY", "RAID", "GUILD", "EMOTE", "INSTANCE" },
+        function()
+            return self.db.profile.channel
+        end,
+        function(value)
+            self.db.profile.channel = value
+        end
+    )
+    channelLabel:SetPoint("TOPLEFT", outputModeButton, "BOTTOMLEFT", 0, -14)
+    channelButton:SetPoint("TOPLEFT", channelLabel, "BOTTOMLEFT", 0, -6)
 
-    local testChannelDropdown = CreateDropdown(panel, "Test channel", { "SAY", "YELL", "PARTY", "RAID", "GUILD", "EMOTE", "INSTANCE" }, function(value)
-        self.db.profile.testChannel = value
-    end)
-    testChannelDropdown:SetPoint("TOPLEFT", channelDropdown, "BOTTOMLEFT", 0, -24)
+    local testChannelLabel, testChannelButton = CreateCycleButton(
+        panel,
+        "Test channel",
+        { "SAY", "YELL", "PARTY", "RAID", "GUILD", "EMOTE", "INSTANCE" },
+        function()
+            return self.db.profile.testChannel
+        end,
+        function(value)
+            self.db.profile.testChannel = value
+        end
+    )
+    testChannelLabel:SetPoint("TOPLEFT", channelButton, "BOTTOMLEFT", 0, -14)
+    testChannelButton:SetPoint("TOPLEFT", testChannelLabel, "BOTTOMLEFT", 0, -6)
 
     local cooldownSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
-    cooldownSlider:SetPoint("TOPLEFT", testChannelDropdown, "BOTTOMLEFT", 24, -32)
+    cooldownSlider:SetPoint("TOPLEFT", testChannelButton, "BOTTOMLEFT", 12, -22)
     cooldownSlider:SetMinMaxValues(2, 60)
     cooldownSlider:SetValueStep(1)
     cooldownSlider:SetObeyStepOnDrag(true)
@@ -298,9 +338,9 @@ function EC:CreateOptionsPanel()
         onlyInInstanceCheck:SetChecked(self.db.profile.onlyInInstance)
         muteInCitiesCheck:SetChecked(self.db.profile.muteInCities)
         muteInInstancesCheck:SetChecked(self.db.profile.muteInInstances)
-        UIDropDownMenu_SetSelectedValue(outputModeDropdown, (self.db.profile.outputMode or "local"):upper())
-        UIDropDownMenu_SetSelectedValue(channelDropdown, self.db.profile.channel)
-        UIDropDownMenu_SetSelectedValue(testChannelDropdown, self.db.profile.testChannel)
+        outputModeButton.refresh()
+        channelButton.refresh()
+        testChannelButton.refresh()
         cooldownSlider:SetValue(self.db.profile.cooldown)
         cooldownChatSlider:SetValue(self.db.profile.cooldownChat)
         cooldownEmoteSlider:SetValue(self.db.profile.cooldownEmote)

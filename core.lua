@@ -26,6 +26,10 @@ function EC:RegisterStaticEvents()
         return
     end
     if InCombatLockdown() then
+        self:Debug("Cannot register events during combat")
+        return
+    end
+    if InCombatLockdown() then
         self.pendingEventInit = true
         return
     end
@@ -84,13 +88,19 @@ function EC:SetupSlashCommands()
             self:HandleSlashCommand(msg)
         end)
     else
-        SLASH_EMOTECONTROL1 = "/emotecontrol"
-        SLASH_EMOTECONTROL2 = "/ec"
-        SlashCmdList["EMOTECONTROL"] = function(msg)
-            self:HandleSlashCommand(msg)
-        end
+        self:Debug("C_SlashCommands not available; slash commands not registered")
     end
     self.slashRegistered = true
+end
+
+function EC:ApplyLiveSettings()
+    self.userActivated = true
+    if self.db.profile.enableSlash then
+        self:SetupSlashCommands()
+    end
+    if self.db.profile.enableEvents then
+        self:RegisterStaticEvents()
+    end
 end
 
 function EC:HandleSlashCommand(msg)
