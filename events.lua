@@ -46,12 +46,30 @@ function EC:HandleCombatLog()
         sourceName = sourceName,
         destGUID = destGUID,
         destName = destName,
+        targetName = destName,
         spellId = spellId,
         spellName = spellName,
         amount = amount,
     }
 
     self:HandleEvent("COMBAT_LOG_EVENT_UNFILTERED", ctx)
+
+    -- Combat-derived virtual events are disabled for testing
+    -- if subEvent == "SWING_DAMAGE" or subEvent == "SPELL_DAMAGE" or subEvent == "RANGE_DAMAGE" or subEvent == "SPELL_PERIODIC_DAMAGE" then
+    --     local critical = select(21, CombatLogGetCurrentEventInfo())
+    --     if critical then
+    --         self:HandleEvent("COMBAT_CRITICAL_HIT", ctx)
+    --     end
+    -- elseif subEvent == "SWING_MISSED" or subEvent == "SPELL_MISSED" or subEvent == "RANGE_MISSED" then
+    --     local missType = select(12, CombatLogGetCurrentEventInfo())
+    --     if missType == "DODGE" then
+    --         self:HandleEvent("COMBAT_DODGED", ctx)
+    --     elseif missType == "PARRY" then
+    --         self:HandleEvent("COMBAT_PARRIED", ctx)
+    --     end
+    -- elseif subEvent == "SPELL_INTERRUPT" then
+    --     self:HandleEvent("COMBAT_INTERRUPTED", ctx)
+    -- end
 end
 
 function EC:HandleEvent(event, ...)

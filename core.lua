@@ -36,9 +36,30 @@ function EC:RegisterTriggerEvents()
     end
     self.registeredEvents = {}
 
+    local virtualEvents = {
+        COMBAT_CRITICAL_HIT = true,
+        COMBAT_DODGED = true,
+        COMBAT_PARRIED = true,
+        COMBAT_INTERRUPTED = true,
+    }
+
+    local needsCombatLog = false
     for event in pairs(self.triggersByEvent) do
-        self.frame:RegisterEvent(event)
-        table.insert(self.registeredEvents, event)
+        if virtualEvents[event] then
+            needsCombatLog = true
+        end
+    end
+
+    for event in pairs(self.triggersByEvent) do
+        if not virtualEvents[event] then
+            self.frame:RegisterEvent(event)
+            table.insert(self.registeredEvents, event)
+        end
+    end
+
+    if needsCombatLog and not self.triggersByEvent["COMBAT_LOG_EVENT_UNFILTERED"] then
+        self.frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        table.insert(self.registeredEvents, "COMBAT_LOG_EVENT_UNFILTERED")
     end
     
     self.pendingEventUpdate = false
@@ -104,6 +125,27 @@ function EC:BuildContext(event, ...)
     local targetName, targetClass, targetRace = self:GetTargetInfo()
     local GetSpellInfo = rawget(_G, "GetSpellInfo")
 
+    local instanceName, instanceType, instanceDifficultyID, instanceDifficultyName
+    if GetInstanceInfo then
+        instanceName, instanceType, instanceDifficultyID = GetInstanceInfo()
+        if instanceDifficultyID and GetDifficultyInfo then
+            local diffName = GetDifficultyInfo(instanceDifficultyID)
+            instanceDifficultyName = diffName
+        end
+    end
+
+    local continentName
+    if C_Map and C_Map.GetBestMapForUnit and C_Map.GetMapInfo then
+        local mapID = C_Map.GetBestMapForUnit("player")
+        if mapID then
+            local mapInfo = C_Map.GetMapInfo(mapID)
+            if mapInfo and mapInfo.parentMapID then
+                local parentInfo = C_Map.GetMapInfo(mapInfo.parentMapID)
+                continentName = parentInfo and parentInfo.name or nil
+            end
+        end
+    end
+
     local ctx = {
         event = event,
         playerName = playerName,
@@ -118,6 +160,12 @@ function EC:BuildContext(event, ...)
         spec = self:GetSpecName(),
         time = date("%H:%M"),
         date = date("%Y-%m-%d"),
+        weekday = date("%A"),
+        groupSize = self:GetGroupSize(),
+        instanceName = instanceName,
+        instanceType = instanceType,
+        instanceDifficulty = instanceDifficultyName,
+        continent = continentName,
     }
 
     if event == "PLAYER_LEVEL_UP" then
@@ -446,6 +494,13 @@ function EC:FormatMessage(message, ctx)
     replace("spell", ctx.spellName)
     replace("source", ctx.sourceName)
     replace("dest", ctx.destName)
+    replace("instanceName", ctx.instanceName)
+    replace("instance", ctx.instanceName)
+    replace("instanceDifficulty", ctx.instanceDifficulty)
+    replace("instanceType", ctx.instanceType)
+    replace("group-size", tostring(ctx.groupSize or ""))
+    replace("weekday", ctx.weekday)
+    replace("continent", ctx.continent)
     return output
 end
 
