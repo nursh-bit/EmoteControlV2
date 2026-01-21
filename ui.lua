@@ -48,12 +48,18 @@ function EC:CreateOptionsPanel()
     end)
     enabledCheck:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -12)
 
+    local outputCheck = CreateCheckbox(panel, "Enable output", "Allow automated messages", function(value)
+        self.db.profile.outputEnabled = value
+        self.userActivated = true
+    end)
+    outputCheck:SetPoint("TOPLEFT", enabledCheck, "BOTTOMLEFT", 0, -8)
+
     local debugCheck = CreateCheckbox(panel, "Debug output", "Print debug information", function(value)
         self.db.profile.debug = value
     end)
-    debugCheck:SetPoint("TOPLEFT", enabledCheck, "BOTTOMLEFT", 0, -8)
+    debugCheck:SetPoint("TOPLEFT", outputCheck, "BOTTOMLEFT", 0, -8)
 
-    local channelDropdown = CreateDropdown(panel, "Output channel", { "SAY", "YELL", "PARTY", "RAID", "GUILD", "EMOTE" }, function(value)
+    local channelDropdown = CreateDropdown(panel, "Output channel", { "SAY", "YELL", "PARTY", "RAID", "GUILD", "EMOTE", "INSTANCE" }, function(value)
         self.db.profile.channel = value
     end)
     channelDropdown:SetPoint("TOPLEFT", debugCheck, "BOTTOMLEFT", -16, -24)
@@ -82,18 +88,84 @@ function EC:CreateOptionsPanel()
         self.db.profile.rateLimit = math.floor(value)
     end)
 
+    local builderButton = CreateFrame("Button", nil, panel, "GameMenuButtonTemplate")
+    builderButton:SetSize(160, 24)
+    builderButton:SetPoint("TOPLEFT", rateSlider, "BOTTOMLEFT", -20, -28)
+    builderButton:SetText("Open Trigger Builder")
+    builderButton:SetScript("OnClick", function()
+        self.userActivated = true
+        self:ToggleTriggerBuilder()
+    end)
+
+    local testButton = CreateFrame("Button", nil, panel, "GameMenuButtonTemplate")
+    testButton:SetSize(140, 24)
+    testButton:SetPoint("LEFT", builderButton, "RIGHT", 12, 0)
+    testButton:SetText("Test Output")
+    testButton:SetScript("OnClick", function()
+        self.userActivated = true
+        local ctx = self:BuildContext("TEST")
+        local message = self:FormatMessage("EmoteControl test: {player} in {zone} at {time}", ctx)
+        self:SendMessage(message, self.db.profile.channel, ctx)
+    end)
+
+    local packTitle = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    packTitle:SetPoint("TOPLEFT", builderButton, "BOTTOMLEFT", 0, -18)
+    packTitle:SetText("Packs")
+
+    local scrollFrame = CreateFrame("ScrollFrame", nil, panel, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetPoint("TOPLEFT", packTitle, "BOTTOMLEFT", 0, -8)
+    scrollFrame:SetSize(360, 140)
+
+    local packList = CreateFrame("Frame", nil, scrollFrame)
+    packList:SetSize(340, 140)
+    scrollFrame:SetScrollChild(packList)
+    self.packList = packList
+    self.packChecks = {}
+
+    local function buildPackList()
+        for _, check in ipairs(self.packChecks) do
+            check:Hide()
+        end
+        self.packChecks = {}
+
+        local ids = {}
+        for packId in pairs(self.packs or {}) do
+            table.insert(ids, packId)
+        end
+        table.sort(ids)
+
+        local y = -4
+        for _, packId in ipairs(ids) do
+            local pack = self.packs[packId]
+            local label = pack and pack.name or packId
+            local check = CreateCheckbox(packList, label .. " (" .. packId .. ")", "Enable/disable this pack", function(value)
+                self.db.profile.enablePacks[packId] = value
+                self:BuildTriggerIndex()
+                self.userActivated = true
+            end)
+            check:SetPoint("TOPLEFT", 4, y)
+            check:SetChecked(self:GetPackEnabled(packId))
+            table.insert(self.packChecks, check)
+            y = y - 20
+        end
+        packList:SetHeight(math.max(140, -y + 8))
+    end
+
     panel.refresh = function()
         enabledCheck:SetChecked(self.db.profile.enabled)
+        outputCheck:SetChecked(self.db.profile.outputEnabled)
         debugCheck:SetChecked(self.db.profile.debug)
         UIDropDownMenu_SetSelectedValue(channelDropdown, self.db.profile.channel)
         cooldownSlider:SetValue(self.db.profile.cooldown)
         rateSlider:SetValue(self.db.profile.rateLimit)
+        buildPackList()
     end
 
     -- WoW 11.0+: Use new Settings API if available, fallback to old InterfaceOptions
     if Settings and Settings.RegisterCanvasLayoutCategory then
         local category = Settings.RegisterCanvasLayoutCategory(panel, "Emote Control")
         Settings.RegisterAddOnCategory(category)
+        self.optionsCategory = category
     elseif rawget(_G, "InterfaceOptions_AddCategory") then
         rawget(_G, "InterfaceOptions_AddCategory")(panel)
     end

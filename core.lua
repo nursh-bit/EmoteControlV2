@@ -8,6 +8,7 @@ function EC:Initialize()
     EmoteControlDB = EmoteControlDB or {}
     self.db = EmoteControlDB
     self:MergeDefaults(self.db, self.defaults)
+    self.userActivated = false
 
     self:RegisterCustomPack()
     self:BuildTriggerIndex()
@@ -56,6 +57,8 @@ function EC:HandleSlashCommand(msg)
     local cmd, rest = msg:match("^(%S+)%s*(.*)$")
     cmd = cmd and cmd:lower() or ""
 
+    self.userActivated = true
+
     if cmd == "on" then
         self.db.profile.enabled = true
         print("|cff00c8ff[EmoteControl]|r Enabled")
@@ -83,6 +86,8 @@ function EC:HandleSlashCommand(msg)
         self:ShowImportFrame()
     elseif cmd == "builder" then
         self:ToggleTriggerBuilder()
+    elseif cmd == "ui" or cmd == "options" then
+        self:OpenOptions()
     else
         print("|cff00c8ff[EmoteControl]|r Commands:")
         print("/ec on | off")
@@ -90,6 +95,7 @@ function EC:HandleSlashCommand(msg)
         print("/ec pack <packId> on|off")
         print("/ec export | import")
         print("/ec builder")
+        print("/ec options")
     end
 end
 
@@ -168,6 +174,14 @@ end
 function EC:ShouldFireTrigger(trigger, ctx)
     local override = self:GetOverride(trigger)
     if override and override.enabled == false then
+        return false
+    end
+
+    if self.db.profile.requireActivation and not self.userActivated then
+        return false
+    end
+
+    if not self.db.profile.outputEnabled then
         return false
     end
 
@@ -440,6 +454,10 @@ function EC:SendMessage(message, channel, ctx)
         return
     end
 
+    if not self.db.profile.outputEnabled then
+        return
+    end
+
     if self.chatReady == false then
         return
     end
@@ -489,5 +507,17 @@ function EC:SendMessage(message, channel, ctx)
     
     if not success and self.db.profile.debug then
         self:Debug("Chat message failed:", err)
+    end
+end
+
+function EC:OpenOptions()
+    if self.optionsCategory and Settings and Settings.OpenToCategory then
+        Settings.OpenToCategory(self.optionsCategory)
+        return
+    end
+    local openToCategory = rawget(_G, "InterfaceOptionsFrame_OpenToCategory")
+    if self.optionsPanel and openToCategory then
+        openToCategory(self.optionsPanel)
+        openToCategory(self.optionsPanel)
     end
 end
