@@ -59,25 +59,84 @@ function EC:CreateOptionsPanel()
     end)
     debugCheck:SetPoint("TOPLEFT", outputCheck, "BOTTOMLEFT", 0, -8)
 
+    local onlyOutOfCombatCheck = CreateCheckbox(panel, "Only out of combat", "Suppress messages while in combat", function(value)
+        self.db.profile.onlyOutOfCombat = value
+    end)
+    onlyOutOfCombatCheck:SetPoint("TOPLEFT", debugCheck, "BOTTOMLEFT", 0, -8)
+
+    local onlyInGroupCheck = CreateCheckbox(panel, "Only in group", "Suppress messages when solo", function(value)
+        self.db.profile.onlyInGroup = value
+    end)
+    onlyInGroupCheck:SetPoint("TOPLEFT", onlyOutOfCombatCheck, "BOTTOMLEFT", 0, -8)
+
+    local onlyInRaidCheck = CreateCheckbox(panel, "Only in raid", "Suppress messages outside raid", function(value)
+        self.db.profile.onlyInRaid = value
+    end)
+    onlyInRaidCheck:SetPoint("TOPLEFT", onlyInGroupCheck, "BOTTOMLEFT", 0, -8)
+
+    local onlyInInstanceCheck = CreateCheckbox(panel, "Only in instances", "Suppress messages outside instances", function(value)
+        self.db.profile.onlyInInstance = value
+    end)
+    onlyInInstanceCheck:SetPoint("TOPLEFT", onlyInRaidCheck, "BOTTOMLEFT", 0, -8)
+
+    local muteInCitiesCheck = CreateCheckbox(panel, "Mute in cities", "Suppress messages while resting", function(value)
+        self.db.profile.muteInCities = value
+    end)
+    muteInCitiesCheck:SetPoint("TOPLEFT", onlyInInstanceCheck, "BOTTOMLEFT", 0, -8)
+
+    local muteInInstancesCheck = CreateCheckbox(panel, "Mute in instances", "Suppress messages in instances", function(value)
+        self.db.profile.muteInInstances = value
+    end)
+    muteInInstancesCheck:SetPoint("TOPLEFT", muteInCitiesCheck, "BOTTOMLEFT", 0, -8)
+
     local channelDropdown = CreateDropdown(panel, "Output channel", { "SAY", "YELL", "PARTY", "RAID", "GUILD", "EMOTE", "INSTANCE" }, function(value)
         self.db.profile.channel = value
     end)
-    channelDropdown:SetPoint("TOPLEFT", debugCheck, "BOTTOMLEFT", -16, -24)
+    channelDropdown:SetPoint("TOPLEFT", muteInInstancesCheck, "BOTTOMLEFT", -16, -24)
+
+    local testChannelDropdown = CreateDropdown(panel, "Test channel", { "SAY", "YELL", "PARTY", "RAID", "GUILD", "EMOTE", "INSTANCE" }, function(value)
+        self.db.profile.testChannel = value
+    end)
+    testChannelDropdown:SetPoint("TOPLEFT", channelDropdown, "BOTTOMLEFT", 0, -24)
 
     local cooldownSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
-    cooldownSlider:SetPoint("TOPLEFT", channelDropdown, "BOTTOMLEFT", 24, -32)
+    cooldownSlider:SetPoint("TOPLEFT", testChannelDropdown, "BOTTOMLEFT", 24, -32)
     cooldownSlider:SetMinMaxValues(2, 60)
     cooldownSlider:SetValueStep(1)
     cooldownSlider:SetObeyStepOnDrag(true)
     local cooldownLabel = cooldownSlider:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     cooldownLabel:SetPoint("TOP", cooldownSlider, "BOTTOM", 0, -2)
-    cooldownLabel:SetText("Global cooldown (seconds)")
+    cooldownLabel:SetText("Base cooldown (seconds)")
     cooldownSlider:SetScript("OnValueChanged", function(_, value)
         self.db.profile.cooldown = math.floor(value)
     end)
 
+    local cooldownChatSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
+    cooldownChatSlider:SetPoint("TOPLEFT", cooldownSlider, "BOTTOMLEFT", 0, -40)
+    cooldownChatSlider:SetMinMaxValues(2, 60)
+    cooldownChatSlider:SetValueStep(1)
+    cooldownChatSlider:SetObeyStepOnDrag(true)
+    local cooldownChatLabel = cooldownChatSlider:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    cooldownChatLabel:SetPoint("TOP", cooldownChatSlider, "BOTTOM", 0, -2)
+    cooldownChatLabel:SetText("Chat cooldown (seconds)")
+    cooldownChatSlider:SetScript("OnValueChanged", function(_, value)
+        self.db.profile.cooldownChat = math.floor(value)
+    end)
+
+    local cooldownEmoteSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
+    cooldownEmoteSlider:SetPoint("TOPLEFT", cooldownChatSlider, "BOTTOMLEFT", 0, -40)
+    cooldownEmoteSlider:SetMinMaxValues(2, 60)
+    cooldownEmoteSlider:SetValueStep(1)
+    cooldownEmoteSlider:SetObeyStepOnDrag(true)
+    local cooldownEmoteLabel = cooldownEmoteSlider:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    cooldownEmoteLabel:SetPoint("TOP", cooldownEmoteSlider, "BOTTOM", 0, -2)
+    cooldownEmoteLabel:SetText("Emote cooldown (seconds)")
+    cooldownEmoteSlider:SetScript("OnValueChanged", function(_, value)
+        self.db.profile.cooldownEmote = math.floor(value)
+    end)
+
     local rateSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
-    rateSlider:SetPoint("TOPLEFT", cooldownSlider, "BOTTOMLEFT", 0, -40)
+    rateSlider:SetPoint("TOPLEFT", cooldownEmoteSlider, "BOTTOMLEFT", 0, -40)
     rateSlider:SetMinMaxValues(1, 20)
     rateSlider:SetValueStep(1)
     rateSlider:SetObeyStepOnDrag(true)
@@ -88,9 +147,21 @@ function EC:CreateOptionsPanel()
         self.db.profile.rateLimit = math.floor(value)
     end)
 
+    local rateWindowSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
+    rateWindowSlider:SetPoint("TOPLEFT", rateSlider, "BOTTOMLEFT", 0, -40)
+    rateWindowSlider:SetMinMaxValues(10, 120)
+    rateWindowSlider:SetValueStep(5)
+    rateWindowSlider:SetObeyStepOnDrag(true)
+    local rateWindowLabel = rateWindowSlider:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    rateWindowLabel:SetPoint("TOP", rateWindowSlider, "BOTTOM", 0, -2)
+    rateWindowLabel:SetText("Rate window (seconds)")
+    rateWindowSlider:SetScript("OnValueChanged", function(_, value)
+        self.db.profile.rateWindowSeconds = math.floor(value)
+    end)
+
     local builderButton = CreateFrame("Button", nil, panel, "GameMenuButtonTemplate")
     builderButton:SetSize(160, 24)
-    builderButton:SetPoint("TOPLEFT", rateSlider, "BOTTOMLEFT", -20, -28)
+    builderButton:SetPoint("TOPLEFT", rateWindowSlider, "BOTTOMLEFT", -20, -28)
     builderButton:SetText("Open Trigger Builder")
     builderButton:SetScript("OnClick", function()
         self.userActivated = true
@@ -105,12 +176,42 @@ function EC:CreateOptionsPanel()
         self.userActivated = true
         local ctx = self:BuildContext("TEST")
         local message = self:FormatMessage("EmoteControl test: {player} in {zone} at {time}", ctx)
-        self:SendMessage(message, self.db.profile.channel, ctx)
+        self:SendMessage(message, self.db.profile.testChannel or self.db.profile.channel, ctx)
     end)
 
     local packTitle = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     packTitle:SetPoint("TOPLEFT", builderButton, "BOTTOMLEFT", 0, -18)
     packTitle:SetText("Packs")
+
+    local enableAllButton = CreateFrame("Button", nil, panel, "GameMenuButtonTemplate")
+    enableAllButton:SetSize(120, 22)
+    enableAllButton:SetPoint("LEFT", packTitle, "RIGHT", 12, 0)
+    enableAllButton:SetText("Enable all")
+    enableAllButton:SetScript("OnClick", function()
+        for packId in pairs(self.packs or {}) do
+            self.db.profile.enablePacks[packId] = true
+        end
+        self:BuildTriggerIndex()
+        self.userActivated = true
+        if panel.refresh then
+            panel.refresh()
+        end
+    end)
+
+    local disableAllButton = CreateFrame("Button", nil, panel, "GameMenuButtonTemplate")
+    disableAllButton:SetSize(120, 22)
+    disableAllButton:SetPoint("LEFT", enableAllButton, "RIGHT", 8, 0)
+    disableAllButton:SetText("Disable all")
+    disableAllButton:SetScript("OnClick", function()
+        for packId in pairs(self.packs or {}) do
+            self.db.profile.enablePacks[packId] = false
+        end
+        self:BuildTriggerIndex()
+        self.userActivated = true
+        if panel.refresh then
+            panel.refresh()
+        end
+    end)
 
     local scrollFrame = CreateFrame("ScrollFrame", nil, panel, "UIPanelScrollFrameTemplate")
     scrollFrame:SetPoint("TOPLEFT", packTitle, "BOTTOMLEFT", 0, -8)
@@ -155,9 +256,19 @@ function EC:CreateOptionsPanel()
         enabledCheck:SetChecked(self.db.profile.enabled)
         outputCheck:SetChecked(self.db.profile.outputEnabled)
         debugCheck:SetChecked(self.db.profile.debug)
+        onlyOutOfCombatCheck:SetChecked(self.db.profile.onlyOutOfCombat)
+        onlyInGroupCheck:SetChecked(self.db.profile.onlyInGroup)
+        onlyInRaidCheck:SetChecked(self.db.profile.onlyInRaid)
+        onlyInInstanceCheck:SetChecked(self.db.profile.onlyInInstance)
+        muteInCitiesCheck:SetChecked(self.db.profile.muteInCities)
+        muteInInstancesCheck:SetChecked(self.db.profile.muteInInstances)
         UIDropDownMenu_SetSelectedValue(channelDropdown, self.db.profile.channel)
+        UIDropDownMenu_SetSelectedValue(testChannelDropdown, self.db.profile.testChannel)
         cooldownSlider:SetValue(self.db.profile.cooldown)
+        cooldownChatSlider:SetValue(self.db.profile.cooldownChat)
+        cooldownEmoteSlider:SetValue(self.db.profile.cooldownEmote)
         rateSlider:SetValue(self.db.profile.rateLimit)
+        rateWindowSlider:SetValue(self.db.profile.rateWindowSeconds)
         buildPackList()
     end
 

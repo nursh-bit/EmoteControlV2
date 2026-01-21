@@ -107,6 +107,20 @@ function EC:HandleSlashCommand(msg)
         self:ShowImportFrame()
     elseif cmd == "builder" then
         self:ToggleTriggerBuilder()
+    elseif cmd == "debug" and rest ~= "" then
+        if rest == "on" then
+            self.db.profile.debug = true
+        elseif rest == "off" then
+            self.db.profile.debug = false
+        end
+        print("|cff00c8ff[EmoteControl]|r Debug", self.db.profile.debug and "on" or "off")
+    elseif cmd == "output" and rest ~= "" then
+        if rest == "on" then
+            self.db.profile.outputEnabled = true
+        elseif rest == "off" then
+            self.db.profile.outputEnabled = false
+        end
+        print("|cff00c8ff[EmoteControl]|r Output", self.db.profile.outputEnabled and "on" or "off")
     elseif cmd == "ui" or cmd == "options" then
         self:OpenOptions()
     else
@@ -116,8 +130,25 @@ function EC:HandleSlashCommand(msg)
         print("/ec pack <packId> on|off")
         print("/ec export | import")
         print("/ec builder")
+        print("/ec debug on|off")
+        print("/ec output on|off")
         print("/ec options")
     end
+end
+
+function EC:GetEffectiveCooldown(trigger, channel)
+    local override = self:GetOverride(trigger)
+    if override and override.cooldown then
+        return override.cooldown
+    end
+    if trigger.cooldown then
+        return trigger.cooldown
+    end
+    local base = self.db.profile.cooldown or 8
+    if channel == "EMOTE" then
+        return self.db.profile.cooldownEmote or base
+    end
+    return self.db.profile.cooldownChat or base
 end
 
 function EC:BuildContext(event, ...)
@@ -233,6 +264,36 @@ function EC:ShouldFireTrigger(trigger, ctx)
         return false
     end
 
+    if self.db.profile.onlyOutOfCombat and UnitAffectingCombat("player") then
+        return false
+    end
+
+    if self.db.profile.onlyInGroup and not IsInGroup() then
+        return false
+    end
+
+    if self.db.profile.onlyInRaid and not IsInRaid() then
+        return false
+    end
+
+    if self.db.profile.onlyInInstance then
+        local inInstance = IsInInstance()
+        if not inInstance then
+            return false
+        end
+    end
+
+    if self.db.profile.muteInInstances then
+        local inInstance = IsInInstance()
+        if inInstance then
+            return false
+        end
+    end
+
+    if self.db.profile.muteInCities and IsResting() then
+        return false
+    end
+
     if not self:CheckConditions(trigger, ctx) then
         return false
     end
@@ -252,7 +313,8 @@ function EC:ShouldFireTrigger(trigger, ctx)
         return false
     end
 
-    local cooldown = override and override.cooldown or trigger.cooldown or self.db.profile.cooldown
+    local channel = self:GetOutputChannel(trigger)
+    local cooldown = self:GetEffectiveCooldown(trigger, channel)
     if not self:IsCooldownReady(trigger, cooldown) then
         return false
     end
@@ -440,7 +502,7 @@ end
 function EC:CheckRateLimit()
     local now = GetTime()
     local limit = self.db.profile.rateLimit
-    local window = 60
+    local window = self.db.profile.rateWindowSeconds or 60
 
     self.rateWindow = self.rateWindow or {}
     local newWindow = {}
